@@ -1,8 +1,9 @@
-""" All the views related to admin"""
+""" All the views related to user"""
 
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
+from django.core.paginator import Paginator
 from django.contrib.auth.hashers import check_password, make_password
 
 from .models import UserModel
@@ -11,7 +12,7 @@ from .jwt_utils import generate_token, get_user_from_request
 
 @api_view(['POST'])
 def user_login(request):
-    """User login"""
+    """user login"""
 
     email = request.data.get('email', None)
     password = request.data.get('password', None)
@@ -23,7 +24,7 @@ def user_login(request):
         user = UserModel.objects.get(email=email)
     except UserModel.DoesNotExist:
         pass
-    if user and check_password(password, user.password):
+    if user and check_password(password, user.password) and user.is_active:
         token = generate_token(user)
         return Response({
             'message': 'Successfull login',
@@ -38,6 +39,25 @@ def user_login(request):
 @api_view(['GET', 'POST'])
 def user_list(request):
     """Get the list of users or post a user"""
+    
+    # commented as of now so we can create our first admins
+    """
+    user = get_user_from_request(request)
+    # if token not passed or not valid
+    if not user:
+        response_data = {
+            "message": "Not authenticated",
+        }
+        return Response(response_data, status=status.HTTP_401_UNAUTHORIZED)
+        
+    # If not user, only users can get the list of users or create a user
+    if not isinstance(user):
+        response_data = {
+            "message": "Not allowed",
+        }
+        return Response(response_data, status=status.HTTP_403_FORBIDDEN) 
+    """
+
 
     if request.method == 'GET':
         user = get_user_from_request(request)
@@ -47,6 +67,7 @@ def user_list(request):
                 "message": "Not authenticated",
             }
             return Response(response_data, status=status.HTTP_401_UNAUTHORIZED)
+        # If not user, only users can get the list of users or create a user
         if not isinstance(user):
             response_data = {
                 "message": "Not allowed",
@@ -57,11 +78,19 @@ def user_list(request):
         users = UserModel.objects.all()
         username = request.query_params.get('username')
         email = request.query_params.get('email')
+        is_active = request.query_params.get('isActive')
+        user_id = request.query_params.get('id')
 
 
-        serializer = UserModelSerializer(many=True)
+        paginator = Paginator(users, request.query_params.get('page_size', 10)) # Default page size is 10
+        page = paginator.get_page(request.query_params.get('page', 1)) # Default page is 1
+
+        serializer = UserModelSerializer(page, many=True)
         return Response({
             'message': 'users fetched successfully',
+            'count': paginator.count,
+            'page_size': paginator.per_page,
+            'page': page.number,
             'data': serializer.data
         }, status=status.HTTP_200_OK)
     
@@ -78,7 +107,7 @@ def user_list(request):
         
 @api_view(['GET', 'PUT', 'DELETE'])
 def user_detail(request, id):
-    """ Get a user details, update a user and delete a user"""
+    """ Get user  details, update a user and delete a user"""
 
 
     user = get_user_from_request(request)
@@ -89,8 +118,8 @@ def user_detail(request, id):
         }
         return Response(response_data, status=status.HTTP_401_UNAUTHORIZED)
     
-    # Only an admin cant get, update or delete an admin
-    if not isinstance(user):
+    # Only a user cant get, update or delete a user
+    if not user:
         response_data = {
             "message": "Not allowed",
         }
@@ -105,7 +134,7 @@ def user_detail(request, id):
         return Response(response_data, status=status.HTTP_404_NOT_FOUND)
 
     if request.method == 'GET':
-        serializer = UserModelSerializer(admin)
+        serializer = UserModelSerializer(user)
         return Response(serializer.data)
     
     elif request.method == 'PUT':

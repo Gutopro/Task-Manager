@@ -1,0 +1,45 @@
+#!/bin/bash
+# Exit script on non-zero command exit status
+set -e
+# install requirements
+echo "installing requirements.txt..."
+pip freeze > requirements.txt
+pip install -r requirements.txt
+
+echo "Dropping existing MySQL database..."
+mysql -u root -e "DROP DATABASE IF EXISTS TaskManager;"
+
+
+# Create new MySQL database
+echo "Creating new MySQL database..."
+mysql -u root -e "CREATE DATABASE TaskManager;"
+mysql -u root -e "USE TaskManager;"
+mysql -u root -e "DROP USER 'user'@'localhost';"
+mysql -u root -e "CREATE USER 'user'@'localhost' IDENTIFIED BY 'XyZ12#45@AbC';"
+mysql -u root -e "GRANT ALL PRIVILEGES ON TaskManager.* TO 'user'@'localhost';"
+mysql -u root -e "FLUSH PRIVILEGES;"
+echo "Database setup complete..."
+# Check if project already exists
+if [ -d "TaskManagerProject" ]; then
+    echo "Project already exists. Deleting..."
+    rm -rf TaskManagerProject
+    fi
+
+# Create new Django project
+echo "Creating new Django project..."
+django-admin startproject TaskManagerProject
+
+# Navigate into the project directory
+cd TaskManagerProject
+
+# Check if app already exists
+if [ -d "TaskManagerApp" ]; then
+    echo "App already exists. Deleting..."
+    rm -rf Authentication
+fi
+
+# Create new Django app
+echo "Creating new Django app..."
+python manage.py startapp Authentication
+
+echo "Setup complete..."

@@ -1,0 +1,13 @@
+#!/bin/bash
+
+# Navigate into the project directory
+cd TaskManagerProject
+
+# Run migrations
+echo "Running migrations..."
+python manage.py makemigrations TaskManagerApp
+python manage.py migrate
+
+# Start server
+echo "Starting server..."
+python manage.py runserver
