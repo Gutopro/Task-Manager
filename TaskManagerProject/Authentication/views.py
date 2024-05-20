@@ -68,7 +68,7 @@ def user_list(request):
             }
             return Response(response_data, status=status.HTTP_401_UNAUTHORIZED)
         # If not user, only users can get the list of users or create a user
-        if not isinstance(user):
+        if not user:
             response_data = {
                 "message": "Not allowed",
             }
